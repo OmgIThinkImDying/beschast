@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Temporary TikTok Live + WhatsApp Link Creator</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#0ea5a4;--danger:#ef4444;--glass:rgba(255,255,255,0.03)}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#071029 0%, #071b2a 100%);color:#e6eef6}
+  .container{max-width:920px;margin:32px auto;padding:20px}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+  h1{font-size:18px;margin:0}
+  p.lead{margin:6px 0 18px;color:var(--muted)}
+  .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 24px rgba(2,6,23,0.6)}
+  form .row{display:flex;gap:12px;flex-wrap:wrap}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  input[type="text"], input[type="tel"]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;outline:none}
+  .col{flex:1 1 320px;min-width:220px}
+  .controls{display:flex;gap:8px;margin-top:12px;align-items:center}
+  button{background:var(--accent);color:#042022;border:0;padding:10px 14px;border-radius:9px;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .result{margin-top:14px;padding:12px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:8px;word-break:break-all}
+  .muted{color:var(--muted);font-size:13px}
+  .big{font-size:18px;font-weight:600}
+  .center{text-align:center}
+  .link-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .preview{margin-top:18px;padding:14px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));display:flex;gap:12px;align-items:center;justify-content:space-between}
+  .btn-primary{background:linear-gradient(90deg,#06b6d4,#06a6d4);color:#021; padding:10px 12px;border-radius:8px;border:0}
+  .btn-ws{background:#25D366;color:#042022;padding:10px 12px;border-radius:8px;border:0}
+  .danger{background:var(--danger);color:white;padding:8px 10px;border-radius:8px;border:0}
+  .notice{margin-top:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);color:var(--muted)}
+  footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+  @media (max-width:600px){header{flex-direction:column;align-items:flex-start} .preview{flex-direction:column;align-items:stretch}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect width="24" height="24" rx="6" fill="#06b6d4"/>
+        <path d="M8 12h8M8 8h8M8 16h5" stroke="#042022" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>Temporary TikTok Live + WhatsApp Link Creator</h1>
+        <p class="lead">Create a link that lasts 30 minutes. The link shows a TikTok open button and a WhatsApp contact button.</p>
+      </div>
+    </header>
+
+    <main class="card" id="app">
+      <!-- Form view -->
+      <div id="creatorView">
+        <form id="createForm" onsubmit="return false" autocomplete="off">
+          <div class="row">
+            <div class="col">
+              <label for="tiktok">TikTok Live URL</label>
+              <input id="tiktok" type="text" placeholder="https://www.tiktok.com/.../live/..." required />
+              <div class="muted" style="margin-top:8px">Paste the TikTok Live URL that the button should open.</div>
+            </div>
+
+            <div class="col">
+              <label for="phone">Phone number (WhatsApp)</label>
+              <input id="phone" type="tel" placeholder="+1234567890 or country code + number" required />
+              <div class="muted" style="margin-top:8px">Use full international format if possible. Non-digits will be stripped when creating the WhatsApp link.</div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button id="createBtn" type="button">Create temporary link (30 min)</button>
+            <button id="clearBtn" type="button" class="ghost">Clear</button>
+            <div style="flex:1"></div>
+            <div class="muted">This is a client-side static demo — the generated link encodes the data and expiry in the URL.</div>
+          </div>
+
+        </form>
+
+        <div id="result" class="result" style="display:none">
+          <div class="muted">Shareable temporary link (expires in 30 minutes):</div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="generatedUrl" readonly style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit" />
+            <button id="copyBtn" class="ghost">Copy</button>
+            <button id="openBtn" class="ghost">Open</button>
+          </div>
+          <div class="link-actions">
+            <div class="muted">Countdown: <span id="countdown" class="big">30:00</span></div>
+            <button id="revokeBtn" class="danger">Revoke now</button>
+          </div>
+        </div>
+
+        <div class="notice" style="margin-top:12px">
+          Tip: The generated URL contains an encoded payload and a SHA-256 digest to detect tampering. It's a client-side-only implementation — it works when hosted as a static file (e.g., GitHub Pages).
+        </div>
+      </div>
+
+      <!-- Link open view -->
+      <div id="linkView" style="display:none">
+        <div id="linkCard" class="preview center">
+          <div style="flex:1">
+            <div class="muted" id="openNotice">This temporary link expires in:</div>
+            <div style="margin-top:6px"><span id="linkCountdown" class="big">30:00</span></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button id="openTiktok" class="btn-primary">Open TikTok Live</button>
+            <button id="openWhatsApp" class="btn-ws">Message on WhatsApp</button>
+          </div>
+        </div>
+
+        <div id="expiredCard" class="preview" style="display:none">
+          <div>
+            <div style="font-weight:700;color:var(--muted)">Link expired</div>
+            <div class="muted" style="margin-top:6px">This temporary link has expired or the content was tampered with.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px" class="muted">If the link looks invalid, it may have been tampered with or created by a different instance.</div>
+      </div>
+
+    </main>
+
+    <footer>
+      Built as a single-file static demo — temporary links are encoded in the URL and validated client-side.
+    </footer>
+  </div>
+
+<script>
+/*
+  Single-file temporary link generator + viewer.
+  - Creates a payload {tiktok, phone, exp}
+  - Encodes payload as base64url in ?data=...&sig=...
+  - Sig is SHA-256 hex of payload (integrity check, not cryptographically secret)
+  - Link valid while Date.now() < exp
+*/
+
+const TEXT_ENCODER = new TextEncoder();
+
+function toHex(buffer) {
+  const bytes = new Uint8Array(buffer);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function sha256Hex(messageBytes) {
+  const hash = await crypto.subtle.digest('SHA-256', messageBytes);
+  return toHex(hash);
+}
+
+function base64UrlEncodeBytes(bytes) {
+  // bytes: Uint8Array
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+  }
+  let b64 = btoa(binary);
+  // base64url
+  return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+function base64UrlDecodeToString(b64u) {
+  // restore base64 padding
+  let b64 = b64u.replace(/-/g,'+').replace(/_/g,'/');
+  while (b64.length % 4) b64 += '=';
+  const bin = atob(b64);
+  // convert binary to UTF-8 string
+  try {
+    // older browsers may not support TextDecoder on binary strings; use workaround
+    const bytes = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  } catch (e) {
+    return bin;
+  }
+}
+
+function normalizePhoneForWhatsApp(phone) {
+  // remove non-digits; WhatsApp expects country code + number, no "+"
+  return phone.replace(/\D/g,'');
+}
+
+function prettifyTimeRemaining(ms) {
+  if (ms <= 0) return '00:00';
+  const totalSeconds = Math.floor(ms/1000);
+  const minutes = Math.floor(totalSeconds/60).toString().padStart(2,'0');
+  const seconds = (totalSeconds % 60).toString().padStart(2,'0');
+  const hours = Math.floor(totalSeconds/3600);
+  if (hours > 0) {
+    const h = hours.toString().padStart(2,'0');
+    const m = Math.floor((totalSeconds % 3600)/60).toString().padStart(2,'0');
+    return `${h}:${m}:${seconds}`;
+  }
+  return `${minutes}:${seconds}`;
+}
+
+// Form logic
+const tiktokInput = document.getElementById('tiktok');
+const phoneInput = document.getElementById('phone');
+const createBtn = document.getElementById('createBtn');
+const clearBtn = document.getElementById('clearBtn');
+const resultDiv = document.getElementById('result');
+const generatedUrlInput = document.getElementById('generatedUrl');
+const copyBtn = document.getElementById('copyBtn');
+const openBtn = document.getElementById('openBtn');
+const countdownEl = document.getElementById('countdown');
+const revokeBtn = document.getElementById('revokeBtn');
+
+let countdownTimer = null;
+let currentExp = 0;
+let currentUrl = '';
+
+createBtn.addEventListener('click', async () => {
+  const tiktok = tiktokInput.value.trim();
+  const phone = phoneInput.value.trim();
+  if (!tiktok || !phone) {
+    alert('Please fill both TikTok URL and phone number.');
+    return;
+  }
+  // basic URL validation for tiktok field
+  try {
+    new URL(tiktok);
+  } catch (e) {
+    if (!tiktok.startsWith('http')) {
+      alert('Please provide a valid TikTok URL (include https://)');
+      return;
+    }
+  }
+
+  const exp = Date.now() + 30 * 60 * 1000; // 30 minutes
+  const payload = { tiktok, phone, exp };
+  const payloadStr = JSON.stringify(payload);
+  const payloadBytes = TEXT_ENCODER.encode(payloadStr);
+  const data = base64UrlEncodeBytes(payloadBytes);
+  const sig = await sha256Hex(payloadBytes);
+
+  const fullUrl = location.origin + location.pathname + '?data=' + encodeURIComponent(data) + '&sig=' + sig;
+  generatedUrlInput.value = fullUrl;
+  currentUrl = fullUrl;
+  currentExp = exp;
+  resultDiv.style.display = 'block';
+  startLocalCountdown();
+});
+
+clearBtn.addEventListener('click', () => {
+  tiktokInput.value = '';
+  phoneInput.value = '';
+  resultDiv.style.display = 'none';
+  stopLocalCountdown();
+  currentExp = 0;
+  generatedUrlInput.value = '';
+  currentUrl = '';
+});
+
+copyBtn.addEventListener('click', async () => {
+  if (!generatedUrlInput.value) return;
+  try {
+    await navigator.clipboard.writeText(generatedUrlInput.value);
+    copyBtn.textContent = 'Copied';
+    setTimeout(()=> copyBtn.textContent = 'Copy',1300);
+  } catch (e) {
+    alert('Copy failed — select and copy manually.');
+  }
+});
+
+openBtn.addEventListener('click', () => {
+  if (!currentUrl) return;
+  window.open(currentUrl, '_blank');
+});
+
+revokeBtn.addEventListener('click', () => {
+  // "Revoke" locally by setting expiry to now in the encoded payload and updating the textbox.
+  if (!currentUrl) return alert('No link to revoke.');
+  // decode current payload from input, set exp to now-1 and re-sign
+  const urlObj = new URL(currentUrl);
+  const data = urlObj.searchParams.get('data');
+  if (!data) return alert('Bad URL.');
+  try {
+    const payloadStr = base64UrlDecodeToString(data);
+    const payload = JSON.parse(payloadStr);
+    payload.exp = Date.now() - 1;
+    const newPayloadStr = JSON.stringify(payload);
+    const bytes = TEXT_ENCODER.encode(newPayloadStr);
+    const newData = base64UrlEncodeBytes(bytes);
+    sha256Hex(bytes).then(sig => {
+      const newUrl = location.origin + location.pathname + '?data=' + encodeURIComponent(newData) + '&sig=' + sig;
+      generatedUrlInput.value = newUrl;
+      currentUrl = newUrl;
+      currentExp = payload.exp;
+      stopLocalCountdown();
+      updateCountdownDisplay();
+    });
+  } catch (e) {
+    alert('Failed to revoke: ' + e.message);
+  }
+});
+
+function startLocalCountdown() {
+  stopLocalCountdown();
+  updateCountdownDisplay();
+  countdownTimer = setInterval(() => {
+    updateCountdownDisplay();
+  }, 1000);
+}
+function stopLocalCountdown() {
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = null;
+}
+function updateCountdownDisplay() {
+  const remaining = currentExp ? currentExp - Date.now() : 0;
+  countdownEl.textContent = prettifyTimeRemaining(remaining);
+  if (remaining <= 0) {
+    // visually mark expired
+    countdownEl.textContent = 'Expired';
+  }
+}
+
+// On page load: if URL has data & sig -> show link view
+async function tryRenderLinkFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const data = params.get('data');
+  const sig = params.get('sig');
+  if (!data || !sig) {
+    // show creator view
+    document.getElementById('creatorView').style.display = '';
+    document.getElementById('linkView').style.display = 'none';
+    return;
+  }
+  // show link viewer
+  document.getElementById('creatorView').style.display = 'none';
+  document.getElementById('linkView').style.display = '';
+  try {
+    const payloadStr = base64UrlDecodeToString(data);
+    const payloadBytes = TEXT_ENCODER.encode(payloadStr);
+    const computedSig = await sha256Hex(payloadBytes);
+    if (computedSig !== sig) {
+      // tampered
+      showExpired();
+      return;
+    }
+    const payload = JSON.parse(payloadStr);
+    const { tiktok, phone, exp } = payload;
+    if (!tiktok || !phone || !exp) {
+      showExpired();
+      return;
+    }
+    if (Date.now() > exp) {
+      showExpired();
+      return;
+    }
+
+    // populate buttons
+    const openTiktok = document.getElementById('openTiktok');
+    const openWhatsApp = document.getElementById('openWhatsApp');
+    const linkCountdown = document.getElementById('linkCountdown');
+
+    openTiktok.onclick = () => {
+      // open in new tab
+      window.open(tiktok, '_blank');
+    };
+
+    // make a WhatsApp link; normalize phone
+    const phoneDigits = normalizePhoneForWhatsApp(phone);
+    const waHref = 'https://wa.me/' + encodeURIComponent(phoneDigits);
+    openWhatsApp.onclick = () => {
+      window.open(waHref, '_blank');
+    };
+
+    // countdown
+    function updateLinkCountdown() {
+      const remaining = exp - Date.now();
+      linkCountdown.textContent = prettifyTimeRemaining(remaining);
+      if (remaining <= 0) {
+        showExpired();
+        if (linkTimer) clearInterval(linkTimer);
+      }
+    }
+    updateLinkCountdown();
+    let linkTimer = setInterval(updateLinkCountdown, 1000);
+
+  } catch (e) {
+    console.error(e);
+    showExpired();
+  }
+}
+
+function showExpired() {
+  document.getElementById('linkCard').style.display = 'none';
+  document.getElementById('expiredCard').style.display = '';
+}
+
+// Kick things off
+tryRenderLinkFromUrl();
+</script>
+</body>
+</html>
